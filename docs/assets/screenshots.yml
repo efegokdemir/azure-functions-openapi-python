@@ -62,7 +62,7 @@ screenshots:
     source:
       inputs:
         - examples/notification_request/function_app.py
-      hash: "sha256:868ab2f640823ff4e561982f9a0bd561bb396e614ca6dd5b856fc788ce58b8aa"
+      hash: "sha256:2700ce6078e322d745c49f90966bb29e19d8ad702287d17db9bc5b9cd211b6fd"
     output:
       hash: "sha256:f8ef5429b57db07e9c222de5d978c114f76f345c84d19774ba2b8e74a016c522"
   - id: partner_import_bridge_swagger_ui

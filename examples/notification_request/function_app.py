@@ -85,7 +85,9 @@ _notifications: dict[str, dict[str, str]] = {}
 )
 @app.route(route="notifications/email", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
 @validate_http(body=EmailNotificationRequest, response_model=NotificationAcceptedResponse)
-def send_notification(req: func.HttpRequest, body: EmailNotificationRequest) -> func.HttpResponse:
+def send_notification(
+    req: func.HttpRequest, body: EmailNotificationRequest
+) -> NotificationAcceptedResponse:
     logger.info("Queuing email notification to %d recipients", len(body.to))
 
     notification_id = f"ntf_{uuid.uuid4().hex[:12]}"
