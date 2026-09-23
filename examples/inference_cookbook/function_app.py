@@ -25,22 +25,35 @@ class GreetingResponse(BaseModel):
     name: str
 
 
-@app.function_name(name="get_greeting")
 @openapi(
     route="/api/greetings/{name}",
     method="get",
     tags=["inference"],
+    parameters=[
+        {
+            "name": "name",
+            "in": "path",
+            "required": True,
+            "schema": {"type": "string"},
+        }
+    ],
     infer_docstring=True,
 )
-@app.route(route="greetings/{name}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
-def get_greeting(req: func.HttpRequest) -> GreetingResponse:
+def build_greeting_response(req: func.HttpRequest) -> GreetingResponse:
     """Greet a caller by name.
 
     The response schema comes from the return annotation, while this summary
     and description are published only because ``infer_docstring=True`` opts in.
     """
     name = req.route_params.get("name", "world")
-    response = GreetingResponse(message=f"Hello, {name}!", name=name)
+    return GreetingResponse(message=f"Hello, {name}!", name=name)
+
+
+@app.function_name(name="get_greeting")
+@app.route(route="greetings/{name}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def get_greeting(req: func.HttpRequest) -> func.HttpResponse:
+    """Serialize the typed greeting for the Azure Functions HTTP runtime."""
+    response = build_greeting_response(req)
     return func.HttpResponse(
         response.model_dump_json(), mimetype="application/json", status_code=200
     )

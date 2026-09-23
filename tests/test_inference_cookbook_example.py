@@ -7,6 +7,7 @@ import json
 from typing import Any
 
 import azure.functions as func
+from openapi_spec_validator import validate
 
 import azure_functions_openapi.decorator as decorator_module
 from azure_functions_openapi.spec import generate_openapi_spec
@@ -41,7 +42,17 @@ def test_inference_cookbook_publishes_inferred_metadata() -> None:
     spec = generate_openapi_spec(title="Inference Cookbook API")
     operation = spec["paths"]["/api/greetings/{name}"]["get"]
 
+    validate(spec)
+
     assert operation["summary"] == "Greet a caller by name."
     assert "infer_docstring=True" in operation["description"]
+    assert operation["parameters"] == [
+        {
+            "name": "name",
+            "in": "path",
+            "required": True,
+            "schema": {"type": "string"},
+        }
+    ]
     response_schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
     assert response_schema["$ref"] == "#/components/schemas/GreetingResponse"

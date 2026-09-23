@@ -84,7 +84,11 @@ _notifications: dict[str, dict[str, str]] = {}
     },
 )
 @app.route(route="notifications/email", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
-@validate_http(body=EmailNotificationRequest, response_model=NotificationAcceptedResponse)
+@validate_http(
+    body=EmailNotificationRequest,
+    response_model=NotificationAcceptedResponse,
+    status_code=202,
+)
 def send_notification(
     req: func.HttpRequest, body: EmailNotificationRequest
 ) -> NotificationAcceptedResponse:
@@ -99,11 +103,7 @@ def send_notification(
     _notifications[notification_id] = entry
 
     result = NotificationAcceptedResponse(**entry)
-    return func.HttpResponse(
-        body=result.model_dump_json(),
-        mimetype="application/json",
-        status_code=202,
-    )
+    return result
 
 
 @app.function_name(name="get_notification_status")
