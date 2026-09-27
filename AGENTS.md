@@ -36,6 +36,43 @@
 
 **No merge before the review checklist is complete.** Do not merge a PR until every item on its review checklist is checked off; an incomplete checklist blocks merge regardless of CI status.
 
+### Who approves what
+
+`main` requires **one approving review**, dismisses stale reviews on new commits, and requires all conversations resolved. `enforce_admins` is **false**, so administrators can bypass those requirements — that exception exists for the release flow below, not for routine merges.
+
+**An AI review is not an approval.** Copilot and Codex submit `COMMENTED`, never `APPROVED`, so they never satisfy the requirement. A PR can carry several AI reviews and still have zero approvals. Treat "the AI reviewed it" and "an authorized reviewer accepted it" as separate facts.
+
+**Externally authored PRs** follow the normal path: a maintainer reviews, approves, and merges.
+
+**Maintainer-authored PRs have no approver today.** GitHub forbids approving your own PR, and `yeongseon` is currently the only account with push access, so a maintainer-authored PR cannot reach an approved state on the normal path. Pick one, in order of preference:
+
+1. **Get a second reviewer.** Grant an authorized reviewer push access and have them approve. This is the only option that satisfies the rule as written, and the only one that scales.
+2. **Split the work.** If the change is genuinely reviewable by a contributor, let them author it so a maintainer can approve.
+3. **Administrator bypass**, under the procedure below. Last resort.
+
+Do not silently self-merge, and do not weaken the protection rule to make a single PR mergeable.
+
+### Administrator bypass
+
+Permitted only when a maintainer-authored change is blocked solely by the missing approval, and delaying it would hold back a release or leave `main` broken. Never use it to skip a failing check.
+
+Before bypassing, confirm every required check is green on the exact head SHA being merged, and all review conversations are resolved. Then record on the PR, in one comment:
+
+- the head SHA merged,
+- which requirement was bypassed and why no reviewer was available,
+- the CI run that passed on that SHA,
+- anything left unverified.
+
+Merge with `gh pr merge --admin --squash --delete-branch`, keeping the `--delete-branch` flag the Branch Hygiene section requires of every CLI merge. If you find yourself doing this routinely, that is the signal to resolve option 1 instead — a standing exception is not a review process.
+
+### Dependabot
+
+`dependabot-automerge.yml` enables auto-merge for patch and minor updates using `secrets.GITHUB_TOKEN`. That token cannot approve a PR, so auto-merge alone cannot satisfy the approval requirement — a Dependabot PR still needs a human approval before it can complete. This has not been exercised since branch protection was applied; if Dependabot PRs start stalling, that is why, and the fix is an approval, not a token with more scope.
+
+### Release flow
+
+`make release-*` commits and pushes directly to `main` rather than opening a PR. There is no push allow-list on the branch, so this works **because** `enforce_admins` is false. Keep that in mind before changing the setting: enabling admin enforcement would break the release path until it is reworked to go through a PR.
+
 ## Issue Conventions
 
 Follow these conventions when opening issues so the backlog stays consistent with sibling DX Toolkit repositories.
@@ -45,7 +82,7 @@ Follow these conventions when opening issues so the backlog stays consistent wit
 - Use Conventional Commit prefixes: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, `ci:`, `build:`, `perf:`.
 - Add a scope qualifier when it narrows the area: `feat(cli):`, `docs(spec):`, `refactor(bridge):`.
 - Keep the title imperative, under ~80 characters, no trailing period.
-- Do **not** put `[P0]` / `[P1]` / `[P2]` (or any priority marker) in the title — priority is tracked with a `priority:p0` / `priority:p1` / `priority:p2` label.
+- Do **not** put a priority marker in the title — priority is tracked with a `priority:*` label.
 
 ### Body
 
@@ -68,7 +105,8 @@ What problem this issue addresses and why now. Note the target release (e.g. vX.
 ### Labels
 
 - Apply at least one of `bug`, `enhancement`, `documentation`, `chore`.
-- Apply exactly one `priority:p0` / `priority:p1` / `priority:p2` label to record priority (replaces the old `## Priority` body line).
+- Apply exactly one priority label. The scale in use is `priority:critical` / `priority:high` / `priority:medium` / `priority:low`; `critical` is reserved for defects that reach package users, such as a broken published artifact or wrong product output.
+- Labels are applied by maintainers or authorized triage automation. An external contributor without label permissions should describe urgency in the issue body and leave labelling to triage.
 - Add `area:*` labels when they exist in the repository.
 - Use `blocker` only when the issue blocks a release.
 
@@ -90,7 +128,7 @@ Keep issue creation **open/unrestricted** on every public toolkit repository (is
 
 This repository is **issue-based, not milestone-based**. Track and group work using issues plus the existing label taxonomy — do **not** introduce parallel structures.
 
-- Plan and group multi-issue efforts with an **umbrella tracker issue** (see above) plus the existing `priority:p0` / `priority:p1` / `priority:p2` labels. Do **not** create GitHub Milestones — none exist by design, and their absence is an intentional signal, not an oversight.
+- Plan and group multi-issue efforts with an **umbrella tracker issue** (see above) plus the existing `priority:*` labels. Do **not** create GitHub Milestones — none exist by design, and their absence is an intentional signal, not an oversight.
 - Do **not** invent new label taxonomies (e.g. `epic:*`, `vNext`, release-tag labels) to group work. Reuse `priority:*`, `area:*` (only where they already exist), and the umbrella issue. Propose any new label in discussion and wait for explicit approval before creating it.
 - Treat optional or tentative suggestions ("we could…", "it might be nice to…", "~해도 괜찮아") as **discussion, not a directive**. Confirm intent before making any structural change to how work is tracked (milestones, labels, project boards, issue hierarchies).
 - Before adding any organizational structure, check whether the repository already has an established convention. A category being empty or unused (zero milestones, no `epic:*` labels) is evidence to follow the existing pattern, not to introduce a new one.
