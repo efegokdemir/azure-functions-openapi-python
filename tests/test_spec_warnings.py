@@ -185,6 +185,58 @@ class TestGenerateReport:
         second = generate_openapi_report().warnings
         assert first == second
 
+    def test_report_forwards_spec_options_and_auth_inference(self) -> None:
+        isolated = OpenAPIRegistry()
+        isolated.set(
+            "get::/api/private",
+            {
+                "function_name": "private",
+                "route": "private",
+                "method": "get",
+                "response": {"200": {"description": "OK"}},
+                "_auth_level": "function",
+            },
+        )
+        options: dict[str, Any] = {
+            "infer_auth_level": True,
+            "servers": [{"url": "https://api.example.com"}],
+            "contact": {"name": "API team"},
+            "license": {"name": "MIT", "url": "https://opensource.org/license/mit"},
+            "external_docs": {"url": "https://docs.example.com"},
+            "tags": [{"name": "private"}],
+        }
+
+        report = generate_openapi_report(registry=isolated, **options)
+        expected = generate_openapi_spec(registry=isolated, **options)
+
+        assert report.spec == expected
+        assert report.spec["servers"] == options["servers"]
+        assert report.spec["info"]["contact"] == options["contact"]
+        assert report.spec["info"]["license"] == options["license"]
+        assert report.spec["externalDocs"] == options["external_docs"]
+        assert report.spec["tags"] == options["tags"]
+        operation = report.spec["paths"]["/api/private"]["get"]
+        assert operation["security"] == [{"AzureFunctionKey": []}]
+
+    def test_report_warning_parity_uses_injected_registry(self) -> None:
+        isolated = OpenAPIRegistry()
+        isolated.set(
+            "get::/api/isolated",
+            {
+                "function_name": "isolated",
+                "route": "isolated",
+                "method": "get",
+                "response": {"200": {"description": "OK"}},
+                "_skew_flags": [WarningCode.VERSION_SKEW.value],
+            },
+        )
+
+        report = generate_openapi_report(registry=isolated)
+        expected = collect_spec_warnings(report.spec, registry=isolated)
+
+        assert report.warnings == expected
+        assert any(w.code == WarningCode.VERSION_SKEW for w in report.warnings)
+
 
 # ---------------------------------------------------------------------------
 # #344: injected-registry isolation for report/warnings
@@ -736,7 +788,6 @@ class TestCliIsolateApp:
         assert "/api/b/one" not in spec["paths"]
 
 
-
 class TestDowngradeDropWarnings:
     """Constructs that cannot survive a pre-3.2 downgrade -- custom-method
     operations (#471) and the ``query`` operation (#472) -- are removed from the
@@ -825,9 +876,7 @@ class TestDowngradeDropWarnings:
     def test_report_surfaces_downgrade_drop(self) -> None:
         reg = self._custom_method_registry()
         report = generate_openapi_report(openapi_version=OPENAPI_VERSION_3_1, registry=reg)
-        assert any(
-            w.code == WarningCode.VERSION_DOWNGRADE_DROP for w in report.warnings
-        )
+        assert any(w.code == WarningCode.VERSION_DOWNGRADE_DROP for w in report.warnings)
 
     def test_fail_on_warnings_catches_downgrade_drop(self) -> None:
         # The global CLI path must exit non-zero: a silently dropped operation on
@@ -850,9 +899,7 @@ class TestItemSchemaDowngradeDrop:
             response={
                 200: {
                     "description": "Event stream",
-                    "content": {
-                        "text/event-stream": {"itemSchema": {"type": "object"}}
-                    },
+                    "content": {"text/event-stream": {"itemSchema": {"type": "object"}}},
                 }
             },
             registry=registry,
@@ -882,9 +929,9 @@ class TestItemSchemaDowngradeDrop:
         spec = generate_openapi_spec(
             openapi_version=OPENAPI_VERSION_3_1, registry=reg, route_prefix=""
         )
-        media = spec["paths"]["/api/events"]["get"]["responses"]["200"][
-            "content"
-        ]["text/event-stream"]
+        media = spec["paths"]["/api/events"]["get"]["responses"]["200"]["content"][
+            "text/event-stream"
+        ]
         assert "itemSchema" in media
 
     def test_item_schema_no_drop_under_3_2(self) -> None:
@@ -906,9 +953,7 @@ class TestItemSchemaDowngradeDrop:
                 openapi_version=OPENAPI_VERSION_3_1, registry=reg, route_prefix=""
             )
         runtime_messages = [
-            str(w.message)
-            for w in caught.list
-            if issubclass(w.category, RuntimeWarning)
+            str(w.message) for w in caught.list if issubclass(w.category, RuntimeWarning)
         ]
         drop_messages = [
             w.message

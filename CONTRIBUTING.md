@@ -70,6 +70,11 @@ make cov         # Run tests with coverage
 make check-all   # Run the full local gate
 ```
 
+Before opening a PR, run `ruff format --check <changed-python-files>` (or
+`ruff format <changed-python-files>` to fix them). `make format-check` checks
+`src` and `tests` without changing files. CI checks those same trees and also
+reports formatting failures on changed Python files in a dedicated step.
+
 ## GitHub Actions Pinning
 
 All external `uses:` references in `.github/workflows/` MUST pin to a
@@ -143,8 +148,12 @@ Documentation is multi-surfaced (English README, translated READMEs, `docs/`,
 and generated changelog). When you change a user-facing fact, propagate it
 across every surface so the docs do not drift:
 
-- [ ] Update `README.md` and mirror the change in every translation
-      (`README.ko.md`, `README.ja.md`, `README.zh-CN.md`).
+- [ ] Update `README.md`. It is the canonical source of truth.
+- [ ] Optionally mirror the change into the translations (`README.ko.md`,
+      `README.ja.md`, `README.zh-CN.md`). Translations are best-effort and
+      community-maintained: updating them is **not** required in the same pull
+      request, and translation drift never blocks a merge. Each translated
+      README carries a staleness banner pointing back to the English source.
 - [ ] Update the matching page under `docs/` (e.g. `docs/cli.md` when CLI
       defaults or flags change).
 - [ ] Keep changelog single-sourced: edit the root `CHANGELOG.md` only.
