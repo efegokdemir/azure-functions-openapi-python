@@ -53,7 +53,7 @@ dev = [
     "pre-commit",
     "pytest",
     "pytest-cov",
-    "ruff==0.16.7",
+    "ruff==0.16.8",
     "openapi-spec-validator>=0.7.0",
     "types-PyYAML",
     "requests",
@@ -95,7 +95,8 @@ features = ["dev", "docs"]
 
 [tool.hatch.envs.default.scripts]
 format = "ruff format src tests"
-style = "ruff check src tests"
+format-check = "ruff format --check src tests"
+style = "ruff check src tests && ruff format --check src tests"
 typecheck = "mypy src tests"
 lint = "hatch run style && hatch run typecheck"
 test = "pytest -v tests"
